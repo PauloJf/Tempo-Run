@@ -22,19 +22,35 @@
 
 ### Player Screen
 - **Live BPM Display**: Large animated display showing the conversion chain: native BPM → multiplier → playback rate → target BPM
-- **Dynamic Album Art**: Album cover with palette-extracted glow that pulses to the beat
+- **BPM Pulse Dot**: Small circle next to the BPM number that pulses on every beat — free-running at target BPM normally; syncs to the metronome's exact beat signal when the metronome is active
+- **Dynamic Album Art**: Album cover with palette-extracted glow that pulses to the beat; gradient + music-note placeholder when no artwork is available; spinner shown while artwork is loading
 - **BPM Control**: Quick adjustment buttons (±1, ±5 BPM) to change your running cadence on the fly
 - **Cadence Locking**: Toggle between locked (cadence-matched playback) and unlocked (normal speed) modes
 - **Transport Controls**: Seekable progress bar, play/pause, skip-next buttons
 - **Tap Tempo**: Set target BPM by tapping to your running rhythm
 - **Sensor Cadence**: Real-time accelerometer reading showing your actual running step rate
+- **Metronome Button**: Topbar icon (lime-highlighted when active) to open the full-screen metronome
 
 ### Intelligent Queue System
 - Fetches 50 random songs and intelligently scores each by BPM fit
 - Considers multiplier options (×0.5, ×1.0, ×2.0) to find songs within tolerance
 - Auto-categorizes songs into preferred (BPM-matched) and fallback buckets
-- Automatically refills when queue drops below 3 songs
+- **Offline pre-download**: entire queue is downloaded to device cache before playback begins — runs fully offline with no buffering mid-run
+- **Refresh loading state**: refresh button shows an inline spinner while loading; the UI remains responsive
+- **Timeout banner**: if the server doesn't respond within 15 seconds, an amber banner is displayed with the error message
+- Automatically refills in the background as you listen
 - Reloads entire queue when server credentials change
+
+### Metronome Screen
+- Full-screen metronome accessible from the player topbar
+- **Pulsing beat disc**: large animated circle with expanding ripple rings and a lime glow that fires on every tick
+- **Audio click**: programmatically generated 40 ms sine-decay tick at 1 200 Hz, pre-loaded for minimal playback latency
+- **Haptic feedback**: direct Android Vibrator access (works regardless of system haptic setting); `lightImpact` on iOS
+- **Follow cadence mode**: metronome automatically tracks your live accelerometer step rate
+- BPM ±1 / ±5 controls shared with the player screen
+- Sound and haptic toggles in the header
+- Continues ticking in the background when you navigate back to the player
+- The BPM pulse dot on the player screen syncs to the metronome beat when it is running
 
 ### Settings Hub (4 Pages)
 - **Server**: Navidrome/Jellyfin URL, credentials, connection testing, demo library access
@@ -74,6 +90,7 @@
 - **just_audio** (^0.9.40): Audio playback with tempo stretching via playback rate control
 - **audio_session** (^0.1.21): Background audio configuration (iOS AVAudioSession, Android AudioFocus)
 - **palette_generator** (^0.3.3): Dynamic color extraction from album artwork
+- **path_provider** (^2.1.3): Temp directory for metronome tick WAV generation
 
 ### Networking & API
 - **dio** (^5.4.3): HTTP client for Subsonic API communication
@@ -81,10 +98,12 @@
 
 ### Sensors & Hardware
 - **sensors_plus** (^4.0.2): Accelerometer access for cadence detection
+- **vibration** (^3.0.0): Direct Android Vibrator API for metronome haptics (bypasses system haptic setting)
 
 ### UI & Assets
 - **google_fonts** (^6.2.1): Custom typography
 - **cupertino_icons** (^1.0.8): iOS-style icons
+- **cached_network_image** (^3.4.1): Album art with loading spinner and error/placeholder states
 - **share_plus** (^10.0.0): Share pace log functionality
 - **package_info_plus** (^8.0.0): App version information
 
@@ -206,6 +225,17 @@ Manually correct the BPM of songs the server provides incorrectly:
 2. Enter corrected BPM
 3. Saved to SQLite and applied globally
 
+### Metronome
+
+**Path**: Player Screen → metronome icon (topbar)
+
+| Control | Default | Description |
+|---------|---------|-------------|
+| Haptic | On | Vibrates on each beat (Android: direct Vibrator; iOS: lightImpact) |
+| Sound | On | Plays audible 1 200 Hz click on each beat |
+| Follow cadence | Off | Sync metronome BPM to live accelerometer step rate |
+| BPM ±1 / ±5 | — | Adjust metronome tempo on the fly |
+
 ---
 
 ## 🆘 Troubleshooting
@@ -240,6 +270,31 @@ Manually correct the BPM of songs the server provides incorrectly:
 
 **iOS**:
 - Grant motion permission when prompted
+
+### Queue Timeout / Empty Queue
+
+**Cause**: Server didn't respond within 15 seconds
+**Fix**:
+1. Check server URL and credentials in Server settings
+2. Verify the server is online and reachable
+3. Reduce queue size in Settings → Queue (fewer songs = faster fetch)
+4. Check your network connection / VPN
+
+### Metronome Not Vibrating
+
+**Android**:
+- Ensure the Haptic toggle is ON in the metronome header
+- Verify `VIBRATE` permission is declared in `AndroidManifest.xml`
+
+**iOS**:
+- Ensure the Haptic toggle is ON
+- The device uses `lightImpact` — requires a device with Taptic Engine
+
+### Metronome Click Inaudible
+
+- Ensure the Sound toggle is ON in the metronome header
+- Check device **media volume** (not ring/notification volume)
+- On first launch, the WAV is generated and cached in the temp directory — if init failed, restart the app
 
 ---
 
